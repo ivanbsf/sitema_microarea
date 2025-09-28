@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ACOMPANHAMENTO TERRITORIAL</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+    }
+    /* Menu lateral */
+    nav {
+      width: 10%;
+      background-color: #2c3e50;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+    nav h2 {
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 1.2rem;
+      color: #f1c40f;
+    }
+    nav a {
+      color: white;
+      text-decoration: none;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+      display: block;
+      transition: background 0.3s;
+    }
+    nav a:hover {
+      background: #34495e;
+    }
+    /* Mapa */
+    #map {
+      width: 90%;
+      height: 100vh;
+    }
+  </style>
+  <!-- Inclua o Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+</head>
+<body>
+    <nav>
+        <h2>Menu</h2>
+        <a href="Mapa_paciente.html" target="_blank">📄 Busca Localização dos Pacientes</a>
+        <a href="PesoAltura.html" target="_blank">📊 Pesos e Alturas</a>
+        <a href="pacientesmicroarea.html" target="_blank">👥 Pacientes por Microárea</a>
+        <a href="outro.html" target="_blank">📄 Outro</a>
+        <a href="outro1.html" target="_blank">📄 Outro 1</a>
+    </nav>
+
+    <!-- Mapa -->
+    <div id="map"></div>
+
+    <!-- Inclua o Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="dados.js"></script>
+    <script>
+      // Definir o ícone personalizado com o caminho do seu arquivo
+      const customIcon = L.icon({
+        iconUrl: 'img/bmap.png', // Caminho para o seu ícone
+        iconSize: [10, 10],       // Ajuste o tamanho aqui
+        iconAnchor: [10, 20],     // Ponto de ancoragem
+        popupAnchor: [0, -20]     // Posição da pop-up em relação ao ícone
+      });
+
+      function initMap() {
+        // Centraliza no município principal (ajuste conforme necessário)
+        const centro = [-19.7130, -43.9869]; // [lat, lng]
+
+        // Cria o mapa
+        const map = L.map('map').setView(centro, 13);
+
+        // Adiciona a camada do OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Adiciona marcadores para cada paciente
+        pacientes.forEach(paciente => {
+          if (paciente.latitude && paciente.longitude) {
+            const marker = L.marker([paciente.latitude, paciente.longitude], { icon: customIcon }).addTo(map);
+
+            // Conteúdo da janela de pop-up
+            const popupContent = `
+              <div style="font-size:14px;">
+                <strong>${paciente.Nome}</strong><br>
+                📍 ${paciente.Rua}, ${paciente.Número} - ${paciente.Bairro}<br>
+                👤 ${paciente.Sexo}, ${paciente.Idade}<br>
+                <a href="${paciente.map_link_google}" target="_blank">Ver no Google Maps</a>
+              </div>
+            `;
+
+            marker.bindPopup(popupContent);
+          }
+        });
+      }
+
+      // Chama a função ao carregar a página
+      document.addEventListener('DOMContentLoaded', initMap);
+    </script>
+</body>
+</html>

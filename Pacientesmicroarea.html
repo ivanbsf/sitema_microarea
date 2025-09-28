@@ -1,0 +1,204 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pacientes por Microárea</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f5f5f5;
+    }
+    h1 {
+        color: #2c3e50;
+        text-align: center;
+    }
+    .filtros {
+        margin: 20px 0;
+        padding: 15px;
+        background-color: white;
+        border-radius: 5px;
+        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    .table-wrapper {
+        overflow-x: auto;
+        margin-top: 20px;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        height: calc(100vh - 220px); /* ajusta altura para caber com header e filtros */
+    }
+    table {
+        border-collapse: collapse;
+        min-width: max-content;
+        background-color: white;
+    }
+    th, td {
+        padding: 10px 12px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+        font-size: 14px;
+        white-space: nowrap;
+    }
+    th {
+        background-color: #3498db;
+        color: white;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+    tr:hover {
+        background-color: #f1f1f1;
+    }
+    .container {
+        max-width: 100%;
+        margin: 0 auto;
+    }
+    select, input {
+        padding: 8px;
+        margin-right: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    a.map-link {
+        color: #2980b9;
+        text-decoration: none;
+        font-weight: bold;
+    }
+    a.map-link:hover {
+        text-decoration: underline;
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>Pacientes por Microárea</h1>
+    
+    <div class="filtros">
+        <label for="filtro-microarea">Filtrar por Microárea:</label>
+        <select id="filtro-microarea">
+            <option value="">Todas</option>
+            <option value="01">Microárea 1</option>
+            <option value="02">Microárea 2</option>
+            <option value="03">Microárea 3</option>
+            <option value="04">Microárea 4</option>
+            <option value="05">Microárea 5</option>
+        </select>
+        
+        <label for="filtro-rua">Filtrar por Rua:</label>
+        <input type="text" id="filtro-rua" placeholder="Digite o nome da rua">
+    </div>
+    
+    <div class="table-wrapper" id="tableWrapper">
+        <table id="tabela-pacientes">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Data Nasc.</th>
+                    <th>Idade</th>
+                    <th>Sexo</th>
+                    <th>Identidade de Gênero</th>
+                    <th>Raça/Cor</th>
+                    <th>CPF</th>
+                    <th>CNS</th>
+                    <th>Tel. Celular</th>
+                    <th>Tel. Residencial</th>
+                    <th>Tel. Contato</th>
+                    <th>Microárea</th>
+                    <th>Rua</th>
+                    <th>Número</th>
+                    <th>Complemento</th>
+                    <th>Bairro</th>
+                    <th>Município</th>
+                    <th>UF</th>
+                    <th>CEP</th>
+                    <th>Dias Últ. Médico</th>
+                    <th>Meses Últ. Médico</th>
+                    <th>Dias Últ. Enfermagem</th>
+                    <th>Meses Últ. Enfermagem</th>
+                    <th>Dias Últ. Odontológico</th>
+                    <th>Meses Últ. Odontológico</th>
+                    <th>Dias Últ. Visita</th>
+                    <th>Meses Últ. Visita</th>
+                    <th>Peso</th>
+                    <th>Altura</th>
+                    <th>Data Medição P/A</th>
+                    <th>Pressão Arterial</th>
+                    <th>Data Medição Pressão</th>
+                    <th>Mapa</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script src="dados.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tbody = document.querySelector('#tabela-pacientes tbody');
+    const filtroMicroarea = document.getElementById('filtro-microarea');
+    const filtroRua = document.getElementById('filtro-rua');
+    
+    preencherTabela(pacientes);
+
+    filtroMicroarea.addEventListener('change', filtrarPacientes);
+    filtroRua.addEventListener('input', filtrarPacientes);
+    
+    function preencherTabela(dados) {
+        tbody.innerHTML = '';
+        dados.forEach(paciente => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${paciente.Nome || ''}</td>
+                <td>${paciente['Data de nascimento'] || ''}</td>
+                <td>${paciente.Idade || ''}</td>
+                <td>${paciente.Sexo || ''}</td>
+                <td>${paciente['Identidade de gênero'] || ''}</td>
+                <td>${paciente['Raça/cor'] || ''}</td>
+                <td>${paciente.CPF || ''}</td>
+                <td>${paciente.CNS || ''}</td>
+                <td>${paciente['Telefone celular'] || ''}</td>
+                <td>${paciente['Telefone residencial'] || ''}</td>
+                <td>${paciente['Telefone de contato'] || ''}</td>
+                <td>${paciente.Microárea || ''}</td>
+                <td>${paciente.Rua || ''}</td>
+                <td>${paciente.Número || ''}</td>
+                <td>${paciente.Complemento || ''}</td>
+                <td>${paciente.Bairro || ''}</td>
+                <td>${paciente.Município || ''}</td>
+                <td>${paciente.UF || ''}</td>
+                <td>${paciente.CEP || ''}</td>
+                <td>${paciente['Dias desde o último atendimento médico'] || ''}</td>
+                <td>${paciente['Meses desde o último atendimento médico'] || ''}</td>
+                <td>${paciente['Dias desde o último atendimento de enfermagem'] || ''}</td>
+                <td>${paciente['Meses desde o último atendimento de enfermagem'] || ''}</td>
+                <td>${paciente['Dias desde o último atendimento odontológico'] || ''}</td>
+                <td>${paciente['Meses desde o último atendimento odontológico'] || ''}</td>
+                <td>${paciente['Dias desde a última visita domiciliar'] || ''}</td>
+                <td>${paciente['Meses desde a última visita domiciliar'] || ''}</td>
+                <td>${paciente['Última medição de peso'] || ''}</td>
+                <td>${paciente['Última medição de altura'] || ''}</td>
+                <td>${paciente['Data da ultima medição de peso e altura'] || ''}</td>
+                <td>${paciente['Última medição de pressão arterial'] || ''}</td>
+                <td>${paciente['Data da última medição de pressão arterial'] || ''}</td>
+                <td><a href="${paciente.map_link_google || '#'}" target="_blank" class="map-link">📍 Ver no mapa</a></td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function filtrarPacientes() {
+        const microareaSelecionada = filtroMicroarea.value;
+        const textoRua = filtroRua.value.toLowerCase();
+        const pacientesFiltrados = pacientes.filter(paciente => {
+            const atendeMicroarea = !microareaSelecionada || paciente.Microárea == microareaSelecionada;
+            const atendeRua = !textoRua || (paciente.Rua && paciente.Rua.toLowerCase().includes(textoRua));
+            return atendeMicroarea && atendeRua;
+        });
+        preencherTabela(pacientesFiltrados);
+    }
+});
+</script>
+</body>
+</html>

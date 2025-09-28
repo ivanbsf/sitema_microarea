@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BUSCA LOCALIZAÇÕES DOS PACIENTES</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+    }
+    /* Barra lateral */
+    aside {
+      width: 20%;
+      background-color: #2c3e50;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      overflow-y: auto;
+    }
+    h2 {
+      text-align: center;
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+      color: #f1c40f;
+    }
+    #filtro-nome {
+      padding: 8px;
+      margin-bottom: 10px;
+      border: none;
+      border-radius: 4px;
+      width: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #34495e;
+    }
+    th, td {
+      padding: 8px;
+      text-align: left;
+      font-size: 14px;
+      color: white;
+    }
+    tr {
+      cursor: pointer;
+    }
+    tr:hover {
+      background-color: #3d566e;
+    }
+    /* Mapa */
+    #map {
+      width: 80%;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <aside>
+    <h2>Pacientes</h2>
+    <input type="text" id="filtro-nome" placeholder="🔍 Buscar paciente...">
+    <table>
+      <tbody id="lista-pacientes"></tbody>
+    </table>
+  </aside>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="dados.js"></script>
+  <script>
+    let map;
+    let activeMarker = null; // marcador atual exibido
+
+    function initMap() {
+      map = L.map("map").setView([-19.9, -43.9], 12);
+
+      // Camada base do mapa (OpenStreetMap)
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+      }).addTo(map);
+
+      preencherLista(pacientes);
+    }
+
+    function preencherLista(dados) {
+      const lista = document.getElementById("lista-pacientes");
+      lista.innerHTML = "";
+
+      dados.forEach(paciente => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${paciente.Nome}</td>`;
+        tr.addEventListener("click", () => {
+          mostrarPaciente(paciente);
+        });
+        lista.appendChild(tr);
+      });
+    }
+
+    function mostrarPaciente(paciente) {
+      if (!paciente.latitude || !paciente.longitude) return;
+
+      const pos = [paciente.latitude, paciente.longitude];
+
+      // Remove marcador anterior
+      if (activeMarker) {
+        map.removeLayer(activeMarker);
+      }
+
+      // Novo marcador
+      activeMarker = L.marker(pos).addTo(map);
+
+      activeMarker.bindPopup(`
+        <strong>${paciente.Nome}</strong><br>
+        📍 ${paciente.Rua}, ${paciente.Número} - ${paciente.Bairro}<br>
+        👤 ${paciente.Sexo}, ${paciente.Idade}<br>
+        <a href="${paciente.map_link_google}" target="_blank">Ver no Google Maps</a>
+      `).openPopup();
+
+      // Centraliza no paciente
+      map.setView(pos, 16);
+    }
+
+    // Filtro por nome
+    document.addEventListener("DOMContentLoaded", () => {
+      const filtro = document.getElementById("filtro-nome");
+      filtro.addEventListener("input", () => {
+        const termo = filtro.value.toLowerCase();
+        const filtrados = pacientes.filter(p => p.Nome.toLowerCase().includes(termo));
+        preencherLista(filtrados);
+      });
+
+      initMap();
+    });
+  </script>
+</body>
+</html>
