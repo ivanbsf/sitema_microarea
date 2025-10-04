@@ -1,8 +1,8 @@
 ﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Pacientes por Microárea</title>
 <style>
     body {
@@ -20,18 +20,30 @@
         background-color: white;
         border-radius: 5px;
         box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .filtros label {
+        margin-right: 10px;
+        font-weight: bold;
+    }
+    #filtro-microarea, #filtroNome {
+        margin-right: 20px;
+        margin-top: 10px;
     }
     .table-wrapper {
         overflow-x: auto;
         margin-top: 20px;
         border-radius: 5px;
         box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        height: calc(100vh - 220px); /* ajusta altura para caber com header e filtros */
+        height: calc(100vh - 220px);
     }
     table {
         border-collapse: collapse;
         min-width: max-content;
         background-color: white;
+        width: 100%;
     }
     th, td {
         padding: 10px 12px;
@@ -56,9 +68,9 @@
     }
     select, input {
         padding: 8px;
-        margin-right: 10px;
         border: 1px solid #ddd;
         border-radius: 4px;
+        font-size: 14px;
     }
     a.map-link {
         color: #2980b9;
@@ -75,18 +87,21 @@
     <h1>Pacientes por Microárea</h1>
     
     <div class="filtros">
-        <label for="filtro-microarea">Filtrar por Microárea:</label>
-        <select id="filtro-microarea">
-            <option value="">Todas</option>
-            <option value="01">Microárea 1</option>
-            <option value="02">Microárea 2</option>
-            <option value="03">Microárea 3</option>
-            <option value="04">Microárea 4</option>
-            <option value="05">Microárea 5</option>
-        </select>
-        
-        <label for="filtro-rua">Filtrar por Rua:</label>
-        <input type="text" id="filtro-rua" placeholder="Digite o nome da rua">
+        <div>
+            <label for="filtro-microarea">Filtrar por Microárea:</label>
+            <select id="filtro-microarea">
+                <option value="">Todas</option>
+                <option value="01">Microárea 1</option>
+                <option value="02">Microárea 2</option>
+                <option value="03">Microárea 3</option>
+                <option value="04">Microárea 4</option>
+                <option value="05">Microárea 5</option>
+            </select>
+        </div>
+        <div>
+            <label for="filtroNome">Nome do paciente:</label>
+            <input type="text" id="filtroNome" placeholder="Digite o nome do paciente" />
+        </div>
     </div>
     
     <div class="table-wrapper" id="tableWrapper">
@@ -138,13 +153,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     const tbody = document.querySelector('#tabela-pacientes tbody');
     const filtroMicroarea = document.getElementById('filtro-microarea');
-    const filtroRua = document.getElementById('filtro-rua');
-    
-    preencherTabela(pacientes);
+    const filtroNome = document.getElementById('filtroNome');
 
-    filtroMicroarea.addEventListener('change', filtrarPacientes);
-    filtroRua.addEventListener('input', filtrarPacientes);
-    
+    // Função para preencher tabela
     function preencherTabela(dados) {
         tbody.innerHTML = '';
         dados.forEach(paciente => {
@@ -188,16 +199,27 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Função para aplicar filtros
     function filtrarPacientes() {
-        const microareaSelecionada = filtroMicroarea.value;
-        const textoRua = filtroRua.value.toLowerCase();
+        const microareaSelecionada = filtroMicroarea.value; // valor da microárea selecionada
+        const textoNome = filtroNome.value.toLowerCase(); // texto do filtro de nome em minúsculas
+
         const pacientesFiltrados = pacientes.filter(paciente => {
-            const atendeMicroarea = !microareaSelecionada || paciente.Microárea == microareaSelecionada;
-            const atendeRua = !textoRua || (paciente.Rua && paciente.Rua.toLowerCase().includes(textoRua));
-            return atendeMicroarea && atendeRua;
+            // Verifica se a microárea do paciente corresponde à seleção
+            const atendeMicroarea = !microareaSelecionada || (paciente.Microárea == microareaSelecionada);
+            // Verifica se o nome do paciente corresponde ao filtro
+            const atendeNome = !textoNome || (paciente.Nome && paciente.Nome.toLowerCase().includes(textoNome));
+            return atendeMicroarea && atendeNome;
         });
         preencherTabela(pacientesFiltrados);
     }
+
+    // Preenche tabela inicialmente
+    preencherTabela(pacientes);
+
+    // Adiciona eventos aos filtros
+    filtroMicroarea.addEventListener('change', filtrarPacientes);
+    filtroNome.addEventListener('input', filtrarPacientes);
 });
 </script>
 </body>

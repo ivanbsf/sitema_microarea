@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Controle de Peso e Altura</title>
     <style>
         body {
@@ -13,6 +13,19 @@
         h1 {
             color: #2c3e50;
             text-align: center;
+        }
+        /* Estilo para o campo de filtro */
+        #filtroNome {
+            width: 100%;
+            max-width: 300px;
+            padding: 8px 12px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
         }
         table {
             width: 100%;
@@ -44,6 +57,9 @@
 <body>
     <div class="container">
         <h1>Controle de Peso e Altura dos Pacientes</h1>
+        <!-- Campo de filtro por nome -->
+        <input type="text" id="filtroNome" placeholder="Filtrar por nome do paciente" />
+
         <table id="tabela-pacientes">
             <thead>
                 <tr>
@@ -66,10 +82,12 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const tbody = document.querySelector('#tabela-pacientes tbody');
-            
+            const filtroInput = document.getElementById('filtroNome');
+
+            // Carregar os pacientes
             pacientes.forEach(paciente => {
                 const row = document.createElement('tr');
-                
+
                 row.innerHTML = `
                     <td>${paciente.Nome}</td>
                     <td>${paciente['Data de nascimento']}</td>
@@ -79,8 +97,23 @@
                     <td>${paciente['Última medição de altura']}</td>
                     <td>${paciente['Data da ultima medição de peso e altura']}</td>
                 `;
-                
+
                 tbody.appendChild(row);
+            });
+
+            // Função para filtrar linhas pelo nome
+            filtroInput.addEventListener('keyup', function() {
+                const valorFiltro = this.value.toLowerCase();
+                const linhas = tbody.querySelectorAll('tr');
+
+                linhas.forEach(linha => {
+                    const nomePaciente = linha.children[0].textContent.toLowerCase();
+                    if (nomePaciente.includes(valorFiltro)) {
+                        linha.style.display = '';
+                    } else {
+                        linha.style.display = 'none';
+                    }
+                });
             });
         });
     </script>
