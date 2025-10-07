@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Descriptografar Dados</title>
+</head>
+<body>
+<h2>Carregar Dados Criptografados</h2>
+<input type="password" id="senha" placeholder="Senha" />
+<button id="carregar">Carregar Dados</button>
+<pre id="resultado"></pre>
+
+<script>
+document.getElementById('carregar').onclick = async () => {
+  const senha = document.getElementById('senha').value;
+  if (!senha) {
+    alert('Digite a senha');
+    return;
+  }
+
+  try {
+    // Carregar o arquivo de texto contendo a string base64
+    const res = await fetch('dados_encrypted.txt');
+    const base64Str = await res.text();
+
+    // Converter base64 para bytes
+    const encryptedBytes = Uint8Array.from(atob(base64Str), c => c.charCodeAt(0));
+
+    // Extrair salt, IV e ciphertext
+    const salt = encryptedBytes.slice(0, 16);
+    const iv = encryptedBytes.slice(16, 32);
+    const ciphertext = encryptedBytes.slice(32);
+
+    // Importar a chave para derivar
+    const keyMaterial = await window.crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(senha),
+      { name: 'PBKDF2' },
+      false,
+      ['deriveKey']
+    );
+
+    // Derivar a chave AES
+    const key = await window.crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt: salt,
+        iterations: 1000000,
+        hash: 'SHA-256'
+      },
+      keyMaterial,
+      { name: 'AES-CBC', length: 256 },
+      false,
+      ['decrypt']
+    );
+
+    // Decryptar
+    const decryptedBuffer = await window.crypto.subtle.decrypt(
+      { name: 'AES-CBC', iv: iv },
+      key,
+      ciphertext
+    );
+
+    const decoder = new TextDecoder();
+    const plaintext = decoder.decode(decryptedBuffer);
+
+    document.getElementById('resultado').textContent = plaintext;
+
+    // Aqui, se o conteúdo for código JS, pode usar eval() (com cuidado)
+    // eval(plaintext);
+  } catch (e) {
+    console.error(e);
+    alert('Erro na descriptografia. Verifique a senha e o arquivo.');
+  }
+};
+</script>
+</body>
+</html>
