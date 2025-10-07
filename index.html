@@ -11,7 +11,6 @@
       display: flex;
       height: 100vh;
     }
-    /* Menu lateral */
     nav {
       width: 15%;
       background-color: #2c3e50;
@@ -20,8 +19,6 @@
       flex-direction: column;
       padding: 20px;
       box-sizing: border-box;
-      top: 0;
-      bottom: 0;
     }
     nav h2 {
       margin-bottom: 20px;
@@ -41,7 +38,6 @@
     nav a:hover {
       background: #34495e;
     }
-    /* Caixas de verificação para microáreas */
     #microareas {
       margin-top: 20px;
     }
@@ -49,126 +45,211 @@
       display: block;
       margin-bottom: 5px;
     }
-    /* Mapa */
     #map {
       width: 85%;
       height: 100vh;
     }
+    #loginScreen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: #111;
+      color: white;
+      z-index: 999;
+    }
+    #loginScreen input {
+      padding: 8px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      text-align: center;
+    }
+    #status {
+      color: #ccc;
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
   </style>
-  <!-- Inclua o Leaflet CSS -->
+
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
 <body>
-    <nav>
-        <h2>Menu</h2>
-        <a href="mapa_paciente.html" target="_blank">Localização dos Pacientes</a>
-        <a href="pesoaltura.html" target="_blank">Pesos e Alturas</a>
-        <a href="pacientesmicroarea.html" target="_blank">Pacientes por Microárea</a>
-        <a href="https://ivanbsf.github.io/declaracoespsf/" target="_blank">Declaração de Endereço</a>
-        <!-- Mais itens
-        <a href="https://ivanbsf.github.io/declaracoespsf/" target="_blank">📄 Outro</a>
-        <a href="outro1.html" target="_blank">📄 Outro 1</a>
-        -->
+  <!-- Tela de senha -->
+  <div id="loginScreen">
+    <h2>🔒 Acesso Restrito</h2>
+    <p>Digite a senha para descriptografar os dados</p>
+    <input type="password" id="senha" placeholder="Senha de acesso" />
+    <button id="carregar">Desbloquear</button>
+    <p id="status"></p>
+  </div>
 
-        <!-- Caixas de verificação para microáreas -->
-        <div id="microareas">
-          <h3>Microáreas</h3>
-          <label><input type="checkbox" id="microarea01" checked> Microárea 01</label>
-          <label><input type="checkbox" id="microarea02" checked> Microárea 02</label>
-          <label><input type="checkbox" id="microarea03" checked> Microárea 03</label>
-          <label><input type="checkbox" id="microarea04" checked> Microárea 04</label>
-          <label><input type="checkbox" id="microarea05" checked> Microárea 05</label>
-        </div>
-    </nav>
+  <!-- Interface principal -->
+  <nav>
+    <h2>Menu</h2>
+    <a href="mapa_paciente.html" target="_blank">Localização dos Pacientes</a>
+    <a href="pesoaltura.html" target="_blank">Pesos e Alturas</a>
+    <a href="pacientesmicroarea.html" target="_blank">Pacientes por Microárea</a>
+    <a href="https://ivanbsf.github.io/declaracoespsf/" target="_blank">Declaração de Endereço</a>
 
-    <!-- Mapa -->
-    <div id="map"></div>
+    <div id="microareas">
+      <h3>Microáreas</h3>
+      <label><input type="checkbox" id="microarea01" checked> Microárea 01</label>
+      <label><input type="checkbox" id="microarea02" checked> Microárea 02</label>
+      <label><input type="checkbox" id="microarea03" checked> Microárea 03</label>
+      <label><input type="checkbox" id="microarea04" checked> Microárea 04</label>
+      <label><input type="checkbox" id="microarea05" checked> Microárea 05</label>
+    </div>
+  </nav>
 
-    <!-- Inclua o Leaflet JS -->
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="dados.js"></script>
-    <script>
-      // Mapear microáreas para ícones
-      const microareaIcons = {
-        '01': 'img/bmap.png',
-        '02': 'img/gmap.png',
-        '03': 'img/omap.png',
-        '04': 'img/pmap.png',
-        '05': 'img/rmap.png'
-      };
+  <div id="map"></div>
 
-      // Grupos de marcadores por microárea
-      const microareaLayers = {
-        '01': L.layerGroup(),
-        '02': L.layerGroup(),
-        '03': L.layerGroup(),
-        '04': L.layerGroup(),
-        '05': L.layerGroup()
-      };
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-      let map;
+  <script>
+  let pacientes = [];
 
-      function initMap() {
-        const centro = [-19.7130, -43.9869];
+  document.getElementById("carregar").addEventListener("click", async () => {
+    const senha = document.getElementById("senha").value.trim();
+    const status = document.getElementById("status");
 
-        map = L.map('map').setView(centro, 13);
+    if (!senha) {
+      alert("Digite a senha.");
+      return;
+    }
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
+    status.textContent = "🔄 Descriptografando...";
 
-        // Para cada paciente, criar um marcador na camada correspondente
-        pacientes.forEach(paciente => {
-          if (paciente.latitude && paciente.longitude && paciente['Microárea']) {
-            const microAreaCodigo = paciente['Microárea'];
-            const iconPath = microareaIcons[microAreaCodigo] || 'img/bmap.png'; // padrão
+    try {
+      const res = await fetch("dados_encrypted.txt");
+      const base64Str = await res.text();
 
-            const icon = L.icon({
-              iconUrl: iconPath,
-              iconSize: [10, 10],
-              iconAnchor: [10, 20],
-              popupAnchor: [0, -20]
-            });
+      const encryptedBytes = Uint8Array.from(atob(base64Str), c => c.charCodeAt(0));
+      const salt = encryptedBytes.slice(0, 16);
+      const iv = encryptedBytes.slice(16, 32);
+      const ciphertext = encryptedBytes.slice(32);
 
-            const marker = L.marker([paciente.latitude, paciente.longitude], { icon: icon });
+      const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        new TextEncoder().encode(senha),
+        { name: "PBKDF2" },
+        false,
+        ["deriveKey"]
+      );
 
-            const popupContent = `
-              <div style="font-size:14px;">
-                <strong>${paciente.Nome}</strong><br>
-                📍 ${paciente.Rua}, ${paciente.Número} - ${paciente.Bairro}<br>
-                👤 ${paciente.Sexo}, ${paciente.Idade}<br>
-                <a href="${paciente.map_link_google}" target="_blank">Ver no Google Maps</a>
-              </div>
-            `;
-            marker.bindPopup(popupContent);
+      const key = await crypto.subtle.deriveKey(
+        {
+          name: "PBKDF2",
+          salt: salt,
+          iterations: 1000000,
+          hash: "SHA-256"
+        },
+        keyMaterial,
+        { name: "AES-CBC", length: 256 },
+        false,
+        ["decrypt"]
+      );
 
-            // Adiciona o marcador à camada de microárea correspondente
-            if (microareaLayers[microAreaCodigo]) {
-              microareaLayers[microAreaCodigo].addLayer(marker);
-            }
-          }
-        });
+      const decryptedBuffer = await crypto.subtle.decrypt({ name: "AES-CBC", iv: iv }, key, ciphertext);
+      const decoder = new TextDecoder();
+      let plaintext = decoder.decode(decryptedBuffer).trim();
 
-        // Adiciona todas as camadas ao mapa inicialmente
-        for (const key in microareaLayers) {
-          microareaLayers[key].addTo(map);
-        }
-
-        // Configurar eventos das caixas de verificação
-        for (let i = 1; i <= 5; i++) {
-          const checkbox = document.getElementById(`microarea0${i}`);
-          checkbox.addEventListener('change', () => {
-            const layer = microareaLayers[`0${i}`];
-            if (checkbox.checked) {
-              layer.addTo(map);
-            } else {
-              map.removeLayer(layer);
-            }
-          });
-        }
+      // Trata caso do arquivo conter "const pacientes = [...]"
+      if (plaintext.startsWith("const pacientes")) {
+        const start = plaintext.indexOf("[");
+        const end = plaintext.lastIndexOf("]");
+        plaintext = plaintext.substring(start, end + 1);
       }
 
-      document.addEventListener('DOMContentLoaded', initMap);
-    </script>
+            // Corrige "NaN" e outros valores inválidos do JSON
+      let cleanedJSON = plaintext.replace(/\bNaN\b/g, "null");
+      pacientes = JSON.parse(cleanedJSON);
+
+      status.textContent = "✅ Descriptografia concluída!";
+
+      // Remove a tela de login
+      document.getElementById("loginScreen").remove();
+
+      // Inicializa o mapa e exibe os dados
+      inicializarSistema();
+
+    } catch (e) {
+      console.error(e);
+      status.textContent = "❌ Erro: senha incorreta ou arquivo inválido.";
+    }
+  });
+
+  // =======================
+  // SISTEMA PRINCIPAL
+  // =======================
+  function inicializarSistema() {
+    const microareaIcons = {
+      '01': 'img/bmap.png',
+      '02': 'img/gmap.png',
+      '03': 'img/omap.png',
+      '04': 'img/pmap.png',
+      '05': 'img/rmap.png'
+    };
+
+    const microareaLayers = {
+      '01': L.layerGroup(),
+      '02': L.layerGroup(),
+      '03': L.layerGroup(),
+      '04': L.layerGroup(),
+      '05': L.layerGroup()
+    };
+
+    const map = L.map('map').setView([-19.7130, -43.9869], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    pacientes.forEach(paciente => {
+      if (paciente.latitude && paciente.longitude && paciente['Microárea']) {
+        const microAreaCodigo = paciente['Microárea'];
+        const iconPath = microareaIcons[microAreaCodigo] || 'img/bmap.png';
+
+        const icon = L.icon({
+          iconUrl: iconPath,
+          iconSize: [12, 12],
+          iconAnchor: [6, 6]
+        });
+
+        const marker = L.marker([paciente.latitude, paciente.longitude], { icon });
+
+        const popupContent = `
+          <div style="font-size:13px;">
+            <strong>${paciente.Nome}</strong><br>
+            📍 ${paciente.Rua}, ${paciente.Número} - ${paciente.Bairro}<br>
+            👤 ${paciente.Sexo}, ${paciente.Idade}<br>
+            <a href="${paciente.map_link_google}" target="_blank">Ver no Google Maps</a>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
+
+        if (microareaLayers[microAreaCodigo]) {
+          microareaLayers[microAreaCodigo].addLayer(marker);
+        }
+      }
+    });
+
+    // Adiciona todas as microáreas inicialmente
+    Object.values(microareaLayers).forEach(layer => layer.addTo(map));
+
+    // Ativa/desativa microáreas
+    for (let i = 1; i <= 5; i++) {
+      const checkbox = document.getElementById(`microarea0${i}`);
+      checkbox.addEventListener('change', () => {
+        const layer = microareaLayers[`0${i}`];
+        if (checkbox.checked) layer.addTo(map);
+        else map.removeLayer(layer);
+      });
+    }
+  }
+  </script>
 </body>
 </html>

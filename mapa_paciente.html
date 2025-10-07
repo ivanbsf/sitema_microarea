@@ -21,6 +21,7 @@
       flex-direction: column;
       padding: 10px;
       overflow-y: auto;
+      display: none; /* Oculto até descriptografar */
     }
     h2 {
       text-align: center;
@@ -56,11 +57,47 @@
     #map {
       width: 80%;
       height: 100vh;
+      display: none; /* Oculto até descriptografar */
+    }
+    /* Tela de senha */
+    #loginScreen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: #111;
+      color: white;
+      z-index: 999;
+    }
+    #loginScreen input {
+      padding: 8px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      text-align: center;
+    }
+    #status {
+      color: #ccc;
+      margin-top: 10px;
+      font-size: 0.9rem;
     }
   </style>
 </head>
 <body>
-  <aside>
+  <!-- Tela de senha -->
+  <div id="loginScreen">
+    <h2>🔒 Acesso Restrito</h2>
+    <p>Digite a senha para descriptografar os dados</p>
+    <input type="password" id="senha" placeholder="Senha de acesso" />
+    <button id="carregar">Desbloquear</button>
+    <p id="status"></p>
+  </div>
+
+  <!-- Interface principal -->
+  <aside id="sidebar">
     <h2>Pacientes</h2>
     <input type="text" id="filtro-nome" placeholder="🔍 Buscar paciente...">
     <table>
@@ -71,71 +108,128 @@
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="dados.js"></script>
   <script>
-    let map;
-    let activeMarker = null; // marcador atual exibido
+let pacientes = [];
 
-    function initMap() {
-      map = L.map("map").setView([-19.9, -43.9], 12);
+document.getElementById("carregar").addEventListener("click", async () => {
+  const senha = document.getElementById("senha").value.trim();
+  const status = document.getElementById("status");
+  if (!senha) return alert("Digite a senha.");
 
-      // Camada base do mapa (OpenStreetMap)
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-      }).addTo(map);
+  status.textContent = "🔄 Descriptografando...";
 
-      preencherLista(pacientes);
+  try {
+    const res = await fetch("dados_encrypted.txt");
+    const base64Str = await res.text();
+
+    const encryptedBytes = Uint8Array.from(atob(base64Str), c => c.charCodeAt(0));
+    const salt = encryptedBytes.slice(0, 16);
+    const iv = encryptedBytes.slice(16, 32);
+    const ciphertext = encryptedBytes.slice(32);
+
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(senha),
+      { name: "PBKDF2" },
+      false,
+      ["deriveKey"]
+    );
+
+    const key = await crypto.subtle.deriveKey(
+      {
+        name: "PBKDF2",
+        salt: salt,
+        iterations: 1000000,
+        hash: "SHA-256"
+      },
+      keyMaterial,
+      { name: "AES-CBC", length: 256 },
+      false,
+      ["decrypt"]
+    );
+
+    const decryptedBuffer = await crypto.subtle.decrypt({ name: "AES-CBC", iv: iv }, key, ciphertext);
+    const decoder = new TextDecoder();
+    let plaintext = decoder.decode(decryptedBuffer).trim();
+
+    // Remove o prefixo "const pacientes = [...]"
+    if (plaintext.startsWith("const pacientes")) {
+      const start = plaintext.indexOf("[");
+      const end = plaintext.lastIndexOf("]");
+      plaintext = plaintext.substring(start, end + 1);
     }
 
-    function preencherLista(dados) {
-      const lista = document.getElementById("lista-pacientes");
-      lista.innerHTML = "";
+    // Corrige valores inválidos
+    plaintext = plaintext.replace(/\bNaN\b/g, "null");
 
-      dados.forEach(paciente => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${paciente.Nome}</td>`;
-        tr.addEventListener("click", () => {
-          mostrarPaciente(paciente);
-        });
-        lista.appendChild(tr);
-      });
-    }
+    pacientes = JSON.parse(plaintext);
+    status.textContent = "✅ Descriptografia concluída!";
 
-    function mostrarPaciente(paciente) {
-      if (!paciente.latitude || !paciente.longitude) return;
+    // Mostra o conteúdo
+    document.getElementById("loginScreen").remove();
+    document.getElementById("sidebar").style.display = "flex";
+    document.getElementById("map").style.display = "block";
 
-      const pos = [paciente.latitude, paciente.longitude];
+    inicializarSistema();
+  } catch (e) {
+    console.error(e);
+    status.textContent = "❌ Erro: senha incorreta ou arquivo inválido.";
+  }
+});
 
-      // Remove marcador anterior
-      if (activeMarker) {
-        map.removeLayer(activeMarker);
-      }
+function inicializarSistema() {
+  let map;
+  let activeMarker = null;
 
-      // Novo marcador
-      activeMarker = L.marker(pos).addTo(map);
+  function initMap() {
+    map = L.map("map").setView([-19.9, -43.9], 12);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    preencherLista(pacientes);
+  }
 
-      activeMarker.bindPopup(`
-        <strong>${paciente.Nome}</strong><br>
-        📍 ${paciente.Rua}, ${paciente.Número} - ${paciente.Bairro}<br>
-        👤 ${paciente.Sexo}, ${paciente.Idade}<br>
-        <a href="${paciente.map_link_google}" target="_blank">Ver no Google Maps</a>
-      `).openPopup();
+  function preencherLista(dados) {
+    const lista = document.getElementById("lista-pacientes");
+    lista.innerHTML = "";
 
-      // Centraliza no paciente
-      map.setView(pos, 16);
-    }
-
-    // Filtro por nome
-    document.addEventListener("DOMContentLoaded", () => {
-      const filtro = document.getElementById("filtro-nome");
-      filtro.addEventListener("input", () => {
-        const termo = filtro.value.toLowerCase();
-        const filtrados = pacientes.filter(p => p.Nome.toLowerCase().includes(termo));
-        preencherLista(filtrados);
-      });
-
-      initMap();
+    dados.forEach(paciente => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${paciente.Nome}</td>`;
+      tr.addEventListener("click", () => mostrarPaciente(paciente));
+      lista.appendChild(tr);
     });
+  }
+
+  function mostrarPaciente(paciente) {
+    if (!paciente.latitude || !paciente.longitude) return;
+
+    const pos = [paciente.latitude, paciente.longitude];
+
+    if (activeMarker) map.removeLayer(activeMarker);
+
+    activeMarker = L.marker(pos).addTo(map);
+
+    activeMarker.bindPopup(`
+      <strong>${paciente.Nome}</strong><br>
+      📍 ${paciente.Rua}, ${paciente.Número} - ${paciente.Bairro}<br>
+      👤 ${paciente.Sexo || ''}, ${paciente.Idade || ''}<br>
+      <a href="${paciente.map_link_google || '#'}" target="_blank">Ver no Google Maps</a>
+    `).openPopup();
+
+    map.setView(pos, 16);
+  }
+
+  // Filtro por nome
+  const filtro = document.getElementById("filtro-nome");
+  filtro.addEventListener("input", () => {
+    const termo = filtro.value.toLowerCase();
+    const filtrados = pacientes.filter(p => p.Nome && p.Nome.toLowerCase().includes(termo));
+    preencherLista(filtrados);
+  });
+
+  initMap();
+}
   </script>
 </body>
 </html>

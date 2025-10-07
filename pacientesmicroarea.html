@@ -65,6 +65,7 @@
     .container {
         max-width: 100%;
         margin: 0 auto;
+        display: none; /* escondido até descriptografar */
     }
     select, input {
         padding: 8px;
@@ -80,10 +81,44 @@
     a.map-link:hover {
         text-decoration: underline;
     }
+    /* Tela de senha */
+    #loginScreen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: #111;
+      color: white;
+      z-index: 999;
+    }
+    #loginScreen input {
+      padding: 8px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      text-align: center;
+    }
+    #status {
+      color: #ccc;
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
 </style>
 </head>
 <body>
-<div class="container">
+     <!-- Tela de senha -->
+  <div id="loginScreen">
+    <h2>🔒 Acesso Restrito</h2>
+    <p>Digite a senha para descriptografar os dados</p>
+    <input type="password" id="senha" placeholder="Senha de acesso" />
+    <button id="carregar">Desbloquear</button>
+    <p id="status"></p>
+  </div>
+
+<div class="container" id="conteudoPrincipal">
     <h1>Pacientes por Microárea</h1>
     
     <div class="filtros">
@@ -148,79 +183,136 @@
     </div>
 </div>
 
-<script src="dados.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const tbody = document.querySelector('#tabela-pacientes tbody');
-    const filtroMicroarea = document.getElementById('filtro-microarea');
-    const filtroNome = document.getElementById('filtroNome');
+let pacientes = [];
 
-    // Função para preencher tabela
-    function preencherTabela(dados) {
-        tbody.innerHTML = '';
-        dados.forEach(paciente => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${paciente.Nome || ''}</td>
-                <td>${paciente['Data de nascimento'] || ''}</td>
-                <td>${paciente.Idade || ''}</td>
-                <td>${paciente.Sexo || ''}</td>
-                <td>${paciente['Identidade de gênero'] || ''}</td>
-                <td>${paciente['Raça/cor'] || ''}</td>
-                <td>${paciente.CPF || ''}</td>
-                <td>${paciente.CNS || ''}</td>
-                <td>${paciente['Telefone celular'] || ''}</td>
-                <td>${paciente['Telefone residencial'] || ''}</td>
-                <td>${paciente['Telefone de contato'] || ''}</td>
-                <td>${paciente.Microárea || ''}</td>
-                <td>${paciente.Rua || ''}</td>
-                <td>${paciente.Número || ''}</td>
-                <td>${paciente.Complemento || ''}</td>
-                <td>${paciente.Bairro || ''}</td>
-                <td>${paciente.Município || ''}</td>
-                <td>${paciente.UF || ''}</td>
-                <td>${paciente.CEP || ''}</td>
-                <td>${paciente['Dias desde o último atendimento médico'] || ''}</td>
-                <td>${paciente['Meses desde o último atendimento médico'] || ''}</td>
-                <td>${paciente['Dias desde o último atendimento de enfermagem'] || ''}</td>
-                <td>${paciente['Meses desde o último atendimento de enfermagem'] || ''}</td>
-                <td>${paciente['Dias desde o último atendimento odontológico'] || ''}</td>
-                <td>${paciente['Meses desde o último atendimento odontológico'] || ''}</td>
-                <td>${paciente['Dias desde a última visita domiciliar'] || ''}</td>
-                <td>${paciente['Meses desde a última visita domiciliar'] || ''}</td>
-                <td>${paciente['Última medição de peso'] || ''}</td>
-                <td>${paciente['Última medição de altura'] || ''}</td>
-                <td>${paciente['Data da ultima medição de peso e altura'] || ''}</td>
-                <td>${paciente['Última medição de pressão arterial'] || ''}</td>
-                <td>${paciente['Data da última medição de pressão arterial'] || ''}</td>
-                <td><a href="${paciente.map_link_google || '#'}" target="_blank" class="map-link">📍 Ver no mapa</a></td>
-            `;
-            tbody.appendChild(row);
-        });
+document.getElementById("carregar").addEventListener("click", async () => {
+  const senha = document.getElementById("senha").value.trim();
+  const status = document.getElementById("status");
+  if (!senha) return alert("Digite a senha.");
+
+  status.textContent = "🔄 Descriptografando...";
+
+  try {
+    const res = await fetch("dados_encrypted.txt");
+    const base64Str = await res.text();
+
+    const encryptedBytes = Uint8Array.from(atob(base64Str), c => c.charCodeAt(0));
+    const salt = encryptedBytes.slice(0, 16);
+    const iv = encryptedBytes.slice(16, 32);
+    const ciphertext = encryptedBytes.slice(32);
+
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(senha),
+      { name: "PBKDF2" },
+      false,
+      ["deriveKey"]
+    );
+
+    const key = await crypto.subtle.deriveKey(
+      {
+        name: "PBKDF2",
+        salt: salt,
+        iterations: 1000000,
+        hash: "SHA-256"
+      },
+      keyMaterial,
+      { name: "AES-CBC", length: 256 },
+      false,
+      ["decrypt"]
+    );
+
+    const decryptedBuffer = await crypto.subtle.decrypt({ name: "AES-CBC", iv: iv }, key, ciphertext);
+    const decoder = new TextDecoder();
+    let plaintext = decoder.decode(decryptedBuffer).trim();
+
+    // Remove o prefixo "const pacientes = [...]"
+    if (plaintext.startsWith("const pacientes")) {
+      const start = plaintext.indexOf("[");
+      const end = plaintext.lastIndexOf("]");
+      plaintext = plaintext.substring(start, end + 1);
     }
 
-    // Função para aplicar filtros
-    function filtrarPacientes() {
-        const microareaSelecionada = filtroMicroarea.value; // valor da microárea selecionada
-        const textoNome = filtroNome.value.toLowerCase(); // texto do filtro de nome em minúsculas
+    plaintext = plaintext.replace(/\bNaN\b/g, "null");
 
-        const pacientesFiltrados = pacientes.filter(paciente => {
-            // Verifica se a microárea do paciente corresponde à seleção
-            const atendeMicroarea = !microareaSelecionada || (paciente.Microárea == microareaSelecionada);
-            // Verifica se o nome do paciente corresponde ao filtro
-            const atendeNome = !textoNome || (paciente.Nome && paciente.Nome.toLowerCase().includes(textoNome));
-            return atendeMicroarea && atendeNome;
-        });
-        preencherTabela(pacientesFiltrados);
-    }
+    pacientes = JSON.parse(plaintext);
+    status.textContent = "✅ Descriptografia concluída!";
 
-    // Preenche tabela inicialmente
-    preencherTabela(pacientes);
+    document.getElementById("loginScreen").remove();
+    document.getElementById("conteudoPrincipal").style.display = "block";
 
-    // Adiciona eventos aos filtros
-    filtroMicroarea.addEventListener('change', filtrarPacientes);
-    filtroNome.addEventListener('input', filtrarPacientes);
+    inicializarSistema();
+  } catch (e) {
+    console.error(e);
+    status.textContent = "❌ Erro: senha incorreta ou arquivo inválido.";
+  }
 });
+
+function inicializarSistema() {
+  const tbody = document.querySelector('#tabela-pacientes tbody');
+  const filtroMicroarea = document.getElementById('filtro-microarea');
+  const filtroNome = document.getElementById('filtroNome');
+
+  function preencherTabela(dados) {
+    tbody.innerHTML = '';
+    dados.forEach(paciente => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${paciente.Nome || ''}</td>
+        <td>${paciente['Data de nascimento'] || ''}</td>
+        <td>${paciente.Idade || ''}</td>
+        <td>${paciente.Sexo || ''}</td>
+        <td>${paciente['Identidade de gênero'] || ''}</td>
+        <td>${paciente['Raça/cor'] || ''}</td>
+        <td>${paciente.CPF || ''}</td>
+        <td>${paciente.CNS || ''}</td>
+        <td>${paciente['Telefone celular'] || ''}</td>
+        <td>${paciente['Telefone residencial'] || ''}</td>
+        <td>${paciente['Telefone de contato'] || ''}</td>
+        <td>${paciente.Microárea || ''}</td>
+        <td>${paciente.Rua || ''}</td>
+        <td>${paciente.Número || ''}</td>
+        <td>${paciente.Complemento || ''}</td>
+        <td>${paciente.Bairro || ''}</td>
+        <td>${paciente.Município || ''}</td>
+        <td>${paciente.UF || ''}</td>
+        <td>${paciente.CEP || ''}</td>
+        <td>${paciente['Dias desde o último atendimento médico'] || ''}</td>
+        <td>${paciente['Meses desde o último atendimento médico'] || ''}</td>
+        <td>${paciente['Dias desde o último atendimento de enfermagem'] || ''}</td>
+        <td>${paciente['Meses desde o último atendimento de enfermagem'] || ''}</td>
+        <td>${paciente['Dias desde o último atendimento odontológico'] || ''}</td>
+        <td>${paciente['Meses desde o último atendimento odontológico'] || ''}</td>
+        <td>${paciente['Dias desde a última visita domiciliar'] || ''}</td>
+        <td>${paciente['Meses desde a última visita domiciliar'] || ''}</td>
+        <td>${paciente['Última medição de peso'] || ''}</td>
+        <td>${paciente['Última medição de altura'] || ''}</td>
+        <td>${paciente['Data da ultima medição de peso e altura'] || ''}</td>
+        <td>${paciente['Última medição de pressão arterial'] || ''}</td>
+        <td>${paciente['Data da última medição de pressão arterial'] || ''}</td>
+        <td><a href="${paciente.map_link_google || '#'}" target="_blank" class="map-link">📍 Ver no mapa</a></td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+
+  function filtrarPacientes() {
+    const microareaSelecionada = filtroMicroarea.value;
+    const textoNome = filtroNome.value.toLowerCase();
+
+    const pacientesFiltrados = pacientes.filter(paciente => {
+      const atendeMicroarea = !microareaSelecionada || (paciente.Microárea == microareaSelecionada);
+      const atendeNome = !textoNome || (paciente.Nome && paciente.Nome.toLowerCase().includes(textoNome));
+      return atendeMicroarea && atendeNome;
+    });
+    preencherTabela(pacientesFiltrados);
+  }
+
+  preencherTabela(pacientes);
+  filtroMicroarea.addEventListener('change', filtrarPacientes);
+  filtroNome.addEventListener('input', filtrarPacientes);
+}
 </script>
 </body>
 </html>

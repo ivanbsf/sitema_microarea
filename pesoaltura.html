@@ -1,121 +1,216 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Controle de Peso e Altura</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f5f5f5;
-        }
-        h1 {
-            color: #2c3e50;
-            text-align: center;
-        }
-        /* Estilo para o campo de filtro */
-        #filtroNome {
-            width: 100%;
-            max-width: 300px;
-            padding: 8px 12px;
-            margin-bottom: 20px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background-color: white;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        th, td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background-color: #3498db;
-            color: white;
-            position: sticky;
-            top: 0;
-        }
-        tr:hover {
-            background-color: #f1f1f1;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle de Peso e Altura</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f5f5f5;
+    }
+    h1 {
+      color: #2c3e50;
+      text-align: center;
+    }
+    /* Campo de filtro */
+    #filtroNome {
+      width: 100%;
+      max-width: 300px;
+      padding: 8px 12px;
+      margin-bottom: 20px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background-color: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #3498db;
+      color: white;
+      position: sticky;
+      top: 0;
+    }
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    /* Tela de senha */
+    #loginScreen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: #111;
+      color: white;
+      z-index: 999;
+    }
+    #loginScreen input {
+      padding: 8px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      text-align: center;
+    }
+    #status {
+      color: #ccc;
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Controle de Peso e Altura dos Pacientes</h1>
-        <!-- Campo de filtro por nome -->
-        <input type="text" id="filtroNome" placeholder="Filtrar por nome do paciente" />
+  <!-- Tela de senha -->
+  <div id="loginScreen">
+    <h2>🔒 Acesso Restrito</h2>
+    <p>Digite a senha para descriptografar os dados</p>
+    <input type="password" id="senha" placeholder="Senha de acesso" />
+    <button id="carregar">Desbloquear</button>
+    <p id="status"></p>
+  </div>
 
-        <table id="tabela-pacientes">
-            <thead>
-                <tr>
-                    <th>Nome</th>
-                    <th>Data de Nascimento</th>
-                    <th>Rua</th>
-                    <th>Número</th>
-                    <th>Peso (kg)</th>
-                    <th>Altura (cm)</th>
-                    <th>Data da Medição</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Os dados serão preenchidos via JavaScript -->
-            </tbody>
-        </table>
-    </div>
+  <!-- Interface principal -->
+  <div class="container" id="conteudoPrincipal" style="display:none;">
+    <h1>Controle de Peso e Altura dos Pacientes</h1>
+    <input type="text" id="filtroNome" placeholder="Filtrar por nome do paciente" />
 
-    <script src="dados.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const tbody = document.querySelector('#tabela-pacientes tbody');
-            const filtroInput = document.getElementById('filtroNome');
+    <table id="tabela-pacientes">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Data de Nascimento</th>
+          <th>Rua</th>
+          <th>Número</th>
+          <th>Peso (kg)</th>
+          <th>Altura (cm)</th>
+          <th>Data da Medição</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-            // Carregar os pacientes
-            pacientes.forEach(paciente => {
-                const row = document.createElement('tr');
+  <script>
+    let pacientes = [];
 
-                row.innerHTML = `
-                    <td>${paciente.Nome}</td>
-                    <td>${paciente['Data de nascimento']}</td>
-                    <td>${paciente.Rua}</td>
-                    <td>${paciente.Número}</td>
-                    <td>${paciente['Última medição de peso']}</td>
-                    <td>${paciente['Última medição de altura']}</td>
-                    <td>${paciente['Data da ultima medição de peso e altura']}</td>
-                `;
+    document.getElementById("carregar").addEventListener("click", async () => {
+      const senha = document.getElementById("senha").value.trim();
+      const status = document.getElementById("status");
+      if (!senha) return alert("Digite a senha.");
 
-                tbody.appendChild(row);
-            });
+      status.textContent = "🔄 Descriptografando...";
 
-            // Função para filtrar linhas pelo nome
-            filtroInput.addEventListener('keyup', function() {
-                const valorFiltro = this.value.toLowerCase();
-                const linhas = tbody.querySelectorAll('tr');
+      try {
+        const res = await fetch("dados_encrypted.txt");
+        const base64Str = await res.text();
 
-                linhas.forEach(linha => {
-                    const nomePaciente = linha.children[0].textContent.toLowerCase();
-                    if (nomePaciente.includes(valorFiltro)) {
-                        linha.style.display = '';
-                    } else {
-                        linha.style.display = 'none';
-                    }
-                });
-            });
+        // Converter base64 em bytes
+        const encryptedBytes = Uint8Array.from(atob(base64Str), c => c.charCodeAt(0));
+        const salt = encryptedBytes.slice(0, 16);
+        const iv = encryptedBytes.slice(16, 32);
+        const ciphertext = encryptedBytes.slice(32);
+
+        // Derivar chave
+        const keyMaterial = await crypto.subtle.importKey(
+          "raw",
+          new TextEncoder().encode(senha),
+          { name: "PBKDF2" },
+          false,
+          ["deriveKey"]
+        );
+
+        const key = await crypto.subtle.deriveKey(
+          {
+            name: "PBKDF2",
+            salt: salt,
+            iterations: 1000000,
+            hash: "SHA-256"
+          },
+          keyMaterial,
+          { name: "AES-CBC", length: 256 },
+          false,
+          ["decrypt"]
+        );
+
+        // Descriptografar
+        const decryptedBuffer = await crypto.subtle.decrypt({ name: "AES-CBC", iv: iv }, key, ciphertext);
+        const decoder = new TextDecoder();
+        let plaintext = decoder.decode(decryptedBuffer).trim();
+
+        // Remove o prefixo "const pacientes = [...]"
+        if (plaintext.startsWith("const pacientes")) {
+          const start = plaintext.indexOf("[");
+          const end = plaintext.lastIndexOf("]");
+          plaintext = plaintext.substring(start, end + 1);
+        }
+
+        // Corrige valores inválidos
+        plaintext = plaintext.replace(/\bNaN\b/g, "null");
+
+        pacientes = JSON.parse(plaintext);
+        status.textContent = "✅ Descriptografia concluída!";
+
+        // Remove tela de login e mostra a tabela
+        document.getElementById("loginScreen").remove();
+        document.getElementById("conteudoPrincipal").style.display = "block";
+
+        inicializarSistema();
+      } catch (e) {
+        console.error(e);
+        status.textContent = "❌ Erro: senha incorreta ou arquivo inválido.";
+      }
+    });
+
+    function inicializarSistema() {
+      const tbody = document.querySelector('#tabela-pacientes tbody');
+      const filtroInput = document.getElementById('filtroNome');
+
+      // Preenche a tabela
+      pacientes.forEach(paciente => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${paciente.Nome || ""}</td>
+          <td>${paciente['Data de nascimento'] || ""}</td>
+          <td>${paciente.Rua || ""}</td>
+          <td>${paciente['Número'] || ""}</td>
+          <td>${paciente['Última medição de peso'] || ""}</td>
+          <td>${paciente['Última medição de altura'] || ""}</td>
+          <td>${paciente['Data da ultima medição de peso e altura'] || ""}</td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      // Filtro por nome
+      filtroInput.addEventListener('keyup', function() {
+        const valorFiltro = this.value.toLowerCase();
+        const linhas = tbody.querySelectorAll('tr');
+
+        linhas.forEach(linha => {
+          const nomePaciente = linha.children[0].textContent.toLowerCase();
+          linha.style.display = nomePaciente.includes(valorFiltro) ? '' : 'none';
         });
-    </script>
+      });
+    }
+  </script>
 </body>
 </html>
